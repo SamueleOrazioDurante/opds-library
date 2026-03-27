@@ -1,7 +1,7 @@
 {
   "name": "opds-library-backend",
   "version": "1.0.0",
-  "description": "Kobo-Shelf OPDS server",
+  "description": "OPDS Library OPDS server",
   "scripts": {
     "start": "bun run src/index.ts",
     "dev": "bun run --watch src/index.ts"

@@ -1,0 +1,9 @@
+services:
+  opds-library:
+    build: .
+    container_name: opds-library
+    ports:
+      - "3000:3000"
+    volumes:
+      - /path/to/your/books:/books
+    restart: unless-stopped

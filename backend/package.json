@@ -1,0 +1,19 @@
+{
+  "name": "opds-library-backend",
+  "version": "1.0.0",
+  "description": "OPDS Library OPDS server",
+  "scripts": {
+    "start": "bun run src/index.ts",
+    "dev": "bun run --watch src/index.ts"
+  },
+  "dependencies": {
+    "elysia": "^1.2.0",
+    "@elysiajs/cors": "^1.2.0",
+    "@elysiajs/static": "^1.2.0",
+    "yauzl": "^2.10.0"
+  },
+  "devDependencies": {
+    "@types/yauzl": "^2.10.3",
+    "typescript": "^5.0.0"
+  }
+}

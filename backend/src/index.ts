@@ -29,8 +29,6 @@ const app = new Elysia()
     })
   )
 
-  // ─── OPDS ──────────────────────────────────────────────────────────────────
-
   .get("/opds", ({ request }) => {
     const xml = generateRoot(getBaseUrl(request));
     return new Response(xml, {
@@ -61,8 +59,6 @@ const app = new Elysia()
     },
     { query: t.Object({ letter: t.Optional(t.String()) }) }
   )
-
-  // ─── REST API ──────────────────────────────────────────────────────────────
 
   /** Explore a directory */
   .get(
@@ -232,4 +228,4 @@ const app = new Elysia()
 
   .listen(PORT);
 
-console.log(`Kobo-Shelf running on http://localhost:${PORT}`);
+console.log(`OPDS Library running on http://localhost:${PORT}`);

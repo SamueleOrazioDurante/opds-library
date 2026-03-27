@@ -1,4 +1,4 @@
-# Kobo-Shelf
+# OPDS Library
 
 A lightweight, zero-configuration OPDS library server for managing and serving ePub books — built for Kobo e-readers and minimalists.
 
@@ -21,22 +21,30 @@ I couldn't find anything decent, lightweight, and with a modern aesthetic to man
 
 ### Docker Compose (recommended)
 
-1. Clone the repo and edit `docker-compose.yml` to point to your books folder:
+#### Production (image)
+
+1. Edit `docker-compose.yml` to point to your books folder:
 
 ```yaml
 volumes:
   - /your/actual/books/path:/books
 ```
 
-2. Build and run:
+2. Run:
 
 ```bash
-docker compose up -d --build
+docker compose up -d
 ```
 
 3. Open `http://localhost:3000` for the web UI.
 
 4. Add the OPDS feed to your Kobo: `http://<your-server-ip>:3000/opds`
+
+#### Development (build from source)
+
+```bash
+docker compose -f docker-compose.dev.yml up -d --build
+```
 
 ### Environment Variables
 
@@ -63,7 +71,7 @@ docker compose up -d --build
 ## Project Structure
 
 ```
-kobo-shelf/
+opds-library/
 ├── backend/
 │   ├── src/
 │   │   ├── index.ts      # Elysia entry point, API & OPDS routing
@@ -80,7 +88,8 @@ kobo-shelf/
 │   │       └── FolderCard.tsx         # Folder icon, name, delete
 │   └── package.json
 ├── Dockerfile             # Multi-stage: builds frontend, runs backend
-├── docker-compose.yml
+├── docker-compose.yml     # Production image
+├── docker-compose.dev.yml # Build from source
 └── README.md
 ```
 

@@ -1,5 +1,5 @@
 {
-  "name": "kobo-shelf-backend",
+  "name": "opds-library-backend",
   "version": "1.0.0",
   "description": "Kobo-Shelf OPDS server",
   "scripts": {

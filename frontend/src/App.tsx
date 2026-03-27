@@ -135,7 +135,7 @@ export default function App() {
             className="text-indigo-600 dark:text-indigo-400 flex-shrink-0"
           />
           <span className="text-lg font-bold text-gray-900 dark:text-gray-100 mr-auto">
-            Kobo-Shelf
+            OPDS Library
           </span>
 
           {/* Copy OPDS link */}

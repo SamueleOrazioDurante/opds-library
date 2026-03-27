@@ -1,6 +1,6 @@
 services:
   opds-library:
-    image: ghcr.io/samueleoraziodurante/opds-library:latest
+    build: .
     container_name: opds-library
     ports:
       - "3000:3000"

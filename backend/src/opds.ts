@@ -7,6 +7,7 @@ const NS = {
   opds: "http://opds-spec.org/2010/catalog",
   dc: "http://purl.org/dc/terms/",
 };
+const APP_NAME = "OPDS Library";
 
 function xmlEscape(str: string): string {
   return str
@@ -48,7 +49,7 @@ function feedHeader(
   <title>${xmlEscape(title)}</title>
   <updated>${updated}</updated>
   <author>
-    <name>Kobo-Shelf</name>
+    <name>${xmlEscape(APP_NAME)}</name>
   </author>
   <link rel="self" href="${xmlEscape(selfHref)}" type="application/atom+xml;profile=opds-catalog"/>
   <link rel="start" href="${xmlEscape(startHref)}" type="application/atom+xml;profile=opds-catalog"/>
@@ -60,7 +61,7 @@ export function generateRoot(baseUrl: string): string {
   const now = new Date().toISOString();
   let xml = feedHeader(
     `${baseUrl}/opds`,
-    "Kobo-Shelf",
+    APP_NAME,
     now,
     `${baseUrl}/opds`,
     `${baseUrl}/opds`

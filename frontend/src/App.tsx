@@ -1,8 +1,9 @@
 import { useState, useEffect, useCallback } from "react";
-import { Moon, Sun, Link, Upload, BookOpen } from "lucide-react";
+import { Moon, Sun, Link, Upload, BookOpen, FolderPlus } from "lucide-react";
 import Breadcrumb from "./components/Breadcrumb";
 import BookCard from "./components/BookCard";
 import FolderCard from "./components/FolderCard";
+import NewFolderModal from "./components/NewFolderModal";
 
 interface BookEntry {
   name: string;
@@ -59,6 +60,7 @@ export default function App() {
   const [loading, setLoading] = useState(true);
   const [copied, setCopied] = useState(false);
   const [uploading, setUploading] = useState(false);
+  const [showNewFolder, setShowNewFolder] = useState(false);
 
   const fetchData = useCallback(async (path: string) => {
     setLoading(true);
@@ -66,6 +68,7 @@ export default function App() {
       const res = await fetch(
         `/api/explore?path=${encodeURIComponent(path)}`
       );
+      if (!res.ok) throw new Error("Failed to fetch");
       const json = await res.json();
       setData(json);
     } catch {
@@ -172,18 +175,29 @@ export default function App() {
               : `${data.folders.length} folder${data.folders.length !== 1 ? "s" : ""}, ${data.books.length} book${data.books.length !== 1 ? "s" : ""}`}
           </p>
 
-          {/* Upload button */}
-          <label className="flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white cursor-pointer transition-colors">
-            <Upload size={13} />
-            {uploading ? "Uploading…" : "Upload ePub"}
-            <input
-              type="file"
-              accept=".epub"
-              className="hidden"
-              onChange={handleUpload}
-              disabled={uploading}
-            />
-          </label>
+          <div className="flex items-center gap-2">
+            {/* New Folder button */}
+            <button
+              onClick={() => setShowNewFolder(true)}
+              className="flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-lg border border-gray-200 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors text-gray-700 dark:text-gray-200"
+            >
+              <FolderPlus size={13} />
+              New Folder
+            </button>
+
+            {/* Upload button */}
+            <label className="flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white cursor-pointer transition-colors">
+              <Upload size={13} />
+              {uploading ? "Uploading…" : "Upload ePub"}
+              <input
+                type="file"
+                accept=".epub"
+                className="hidden"
+                onChange={handleUpload}
+                disabled={uploading}
+              />
+            </label>
+          </div>
         </div>
 
         {loading ? (
@@ -249,6 +263,18 @@ export default function App() {
           </>
         )}
       </main>
+
+      {/* New Folder Modal */}
+      {showNewFolder && (
+        <NewFolderModal
+          currentPath={currentPath}
+          onCreated={() => {
+            setShowNewFolder(false);
+            fetchData(currentPath);
+          }}
+          onClose={() => setShowNewFolder(false)}
+        />
+      )}
     </div>
   );
 }

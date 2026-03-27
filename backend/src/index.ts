@@ -13,6 +13,11 @@ import {
 
 const PORT = Number(process.env.PORT ?? 3000);
 
+// Ensure the books directory exists
+if (!fs.existsSync(BOOKS_ROOT)) {
+  fs.mkdirSync(BOOKS_ROOT, { recursive: true });
+}
+
 // Determine the base URL for OPDS links
 function getBaseUrl(request: Request): string {
   const url = new URL(request.url);
@@ -192,6 +197,40 @@ const app = new Elysia()
       }
     },
     { query: t.Object({ path: t.String() }) }
+  )
+
+  /** Create a folder */
+  .post(
+    "/api/folder",
+    ({ query, body, set }) => {
+      const relPath = (query.path as string) ?? "";
+      const name = ((body as { name: string }).name ?? "").trim();
+      if (!name) {
+        set.status = 400;
+        return { error: "Folder name is required" };
+      }
+      if (/[\/\\]/.test(name)) {
+        set.status = 400;
+        return { error: "Folder name must not contain path separators" };
+      }
+      try {
+        const parentDir = relPath ? resolveSafe(relPath) : BOOKS_ROOT;
+        const newDir = path.join(parentDir, name);
+        if (fs.existsSync(newDir)) {
+          set.status = 409;
+          return { error: "A folder with this name already exists" };
+        }
+        fs.mkdirSync(newDir, { recursive: true });
+        return { ok: true, path: path.join(relPath, name) };
+      } catch (e) {
+        set.status = 500;
+        return { error: (e as Error).message };
+      }
+    },
+    {
+      query: t.Object({ path: t.Optional(t.String()) }),
+      body: t.Object({ name: t.String() }),
+    }
   )
 
   /** Upload a book */

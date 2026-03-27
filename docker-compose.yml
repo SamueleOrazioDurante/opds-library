@@ -1,0 +1,9 @@
+services:
+  kobo-shelf:
+    build: .
+    container_name: kobo-shelf
+    ports:
+      - "3000:3000"
+    volumes:
+      - /path/to/your/books:/books  # The only directory that matters
+    restart: unless-stopped

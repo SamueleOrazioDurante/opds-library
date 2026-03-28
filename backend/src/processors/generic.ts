@@ -11,7 +11,7 @@ export const genericProcessor: BookProcessor = {
       language: "",
     };
   },
-  async getCover(_relPath: string): Promise<Buffer | null> {
+  async getCover(_relPath: string): Promise<{ buf: Buffer; mime: string } | null> {
     return null;
   },
 };

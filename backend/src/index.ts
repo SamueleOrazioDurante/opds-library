@@ -91,13 +91,13 @@ const app = new Elysia()
       }
       try {
         const processor = getProcessor(relFile);
-        const buf = await processor.getCover(relFile);
-        if (!buf) {
+        const result = await processor.getCover(relFile);
+        if (!result) {
           set.status = 404;
           return "No cover found";
         }
-        return new Response(buf, {
-          headers: { "Content-Type": "image/jpeg" },
+        return new Response(result.buf, {
+          headers: { "Content-Type": result.mime },
         });
       } catch (e) {
         set.status = 500;

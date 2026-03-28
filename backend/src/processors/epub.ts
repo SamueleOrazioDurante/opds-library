@@ -41,26 +41,52 @@ function parseOpf(xml: string) {
   const language = xmlText(xml, "language") || "";
 
   let coverId: string | undefined;
-  const metaCover = xml.match(/<meta[^>]*name=["']cover["'][^>]*content=["']([^"']+)["']/i);
-  if (metaCover) coverId = metaCover[1];
+  const metaMatches = xml.matchAll(/<meta\s+([^>]+)>/gi);
+  for (const m of metaMatches) {
+    const attrs = m[1];
+    const nameMatch = attrs.match(/name=["']([^"']+)["']/i);
+    const contentMatch = attrs.match(/content=["']([^"']+)["']/i);
+    if (nameMatch && nameMatch[1].toLowerCase() === "cover" && contentMatch) {
+      coverId = contentMatch[1];
+      break;
+    }
+  }
+
+  const items: { id: string; href: string; mediaType: string; properties: string }[] = [];
+  const itemMatches = xml.matchAll(/<item\s+([^>]+)>/gi);
+  for (const m of itemMatches) {
+    const attrs = m[1];
+    const idMatch = attrs.match(/id=["']([^"']+)["']/i);
+    const hrefMatch = attrs.match(/href=["']([^"']+)["']/i);
+    const mediaMatch = attrs.match(/media-type=["']([^"']+)["']/i);
+    const propMatch = attrs.match(/properties=["']([^"']+)["']/i);
+    if (idMatch && hrefMatch) {
+      items.push({
+        id: idMatch[1],
+        href: hrefMatch[1],
+        mediaType: mediaMatch ? mediaMatch[1] : "",
+        properties: propMatch ? propMatch[1] : ""
+      });
+    }
+  }
 
   let coverHref: string | undefined;
+
   if (coverId) {
-    const escapedId = coverId.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-    const manifestItem = xml.match(new RegExp(`<item[^>]*id=["']${escapedId}["'][^>]*href=["']([^"']+)["']`, "i"));
-    if (manifestItem) coverHref = manifestItem[1];
+    const exactMatch = items.find((it) => it.id === coverId);
+    if (exactMatch) coverHref = exactMatch.href;
   }
 
   if (!coverHref) {
-    const epub3Cover = xml.match(/<item[^>]*properties=["'][^"']*cover-image[^"']*["'][^>]*href=["']([^"']+)["']/i);
-    if (epub3Cover) coverHref = epub3Cover[1];
+    const epub3Match = items.find((it) => it.properties.includes("cover-image"));
+    if (epub3Match) coverHref = epub3Match.href;
   }
 
   if (!coverHref) {
-    const imageItems = [...xml.matchAll(/<item[^>]*media-type=["'](image\/jpeg|image\/png)["'][^>]*href=["']([^"']+)["']/gi)];
-    const coverLike = imageItems.find((it) => it[0].toLowerCase().includes("cover") || it[2].toLowerCase().includes("cover"));
-    if (coverLike) coverHref = coverLike[2];
-    else if (imageItems.length > 0) coverHref = imageItems[0][2];
+    const imageItems = items.filter((it) => it.mediaType.includes("image/"));
+    const coverLike = imageItems.find((it) => it.id.toLowerCase().includes("cover") || it.href.toLowerCase().includes("cover"));
+    if (coverLike) coverHref = coverLike.href;
+    else if (imageItems.length > 0) coverHref = imageItems[0].href;
   }
 
   return { title, author, language, coverHref };
@@ -98,12 +124,24 @@ export const epubProcessor: BookProcessor = {
           resolve({ title: path.basename(relPath, ".epub"), author: "Unknown", language: "" });
         } else {
           const parsed = parseOpf(finalOpfContent);
-          const decodedCoverHref = parsed.coverHref ? decodeURIComponent(parsed.coverHref) : undefined;
+          
+          let rawHref = parsed.coverHref ? parsed.coverHref.split(/[#?]/)[0] : "";
+          let decodedCoverHref = rawHref ? decodeURIComponent(rawHref) : undefined;
+          
+          let coverFile: string | undefined;
+          if (decodedCoverHref) {
+            if (finalOpfBase) {
+               coverFile = path.posix.join(finalOpfBase, decodedCoverHref);
+            } else {
+               coverFile = path.posix.normalize(decodedCoverHref);
+            }
+          }
+
           resolve({
             title: parsed.title,
             author: parsed.author,
             language: parsed.language,
-            coverFile: decodedCoverHref ? (finalOpfBase ? `${finalOpfBase}/${decodedCoverHref}` : decodedCoverHref) : undefined,
+            coverFile,
           });
         }
         zip.close();
@@ -133,11 +171,11 @@ export const epubProcessor: BookProcessor = {
     });
   },
 
-  async getCover(relPath: string): Promise<Buffer | null> {
+  async getCover(relPath: string): Promise<{ buf: Buffer; mime: string } | null> {
     const meta = await this.getMetadata(relPath);
     if (!meta.coverFile) return null;
 
-    const coverEntry = meta.coverFile.replace(/\\/g, "/");
+    const coverEntry = meta.coverFile;
     const absPath = resolveSafe(relPath);
     const zip = await openZip(absPath);
 
@@ -156,7 +194,15 @@ export const epubProcessor: BookProcessor = {
           try {
             const buf = await readEntry(zip, entry);
             zip.close();
-            resolve(buf);
+            
+            const ext = path.extname(entry.fileName).toLowerCase();
+            let mime = "image/jpeg";
+            if (ext === ".png") mime = "image/png";
+            else if (ext === ".svg") mime = "image/svg+xml";
+            else if (ext === ".gif") mime = "image/gif";
+            else if (ext === ".webp") mime = "image/webp";
+            
+            resolve({ buf, mime });
           } catch (e) {
             zip.close();
             reject(e);

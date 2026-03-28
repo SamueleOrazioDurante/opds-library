@@ -62,7 +62,7 @@ export const archiveProcessor: BookProcessor = {
     };
   },
 
-  async getCover(relPath: string): Promise<Buffer | null> {
+  async getCover(relPath: string): Promise<{ buf: Buffer; mime: string } | null> {
     const ext = path.extname(relPath);
     if (ext.toLowerCase() !== ".cbz") return null; // No native CBR support without rar lib
 
@@ -78,7 +78,15 @@ export const archiveProcessor: BookProcessor = {
           try {
             const buf = await readEntry(zip, entry);
             zip.close();
-            resolve(buf);
+            
+            const ext = path.extname(entry.fileName).toLowerCase();
+            let mime = "image/jpeg";
+            if (ext === ".png") mime = "image/png";
+            else if (ext === ".svg") mime = "image/svg+xml";
+            else if (ext === ".gif") mime = "image/gif";
+            else if (ext === ".webp") mime = "image/webp";
+            
+            resolve({ buf, mime });
           } catch (e) {
             zip.close();
             reject(e);

@@ -7,5 +7,5 @@ export interface BookMetadata {
 
 export interface BookProcessor {
   getMetadata(relPath: string): Promise<BookMetadata>;
-  getCover(relPath: string): Promise<Buffer | null>;
+  getCover(relPath: string): Promise<{ buf: Buffer; mime: string } | null>;
 }

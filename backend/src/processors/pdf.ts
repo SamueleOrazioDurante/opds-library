@@ -32,7 +32,7 @@ export const pdfProcessor: BookProcessor = {
     }
   },
 
-  async getCover(_relPath: string): Promise<Buffer | null> {
+  async getCover(_relPath: string): Promise<{ buf: Buffer; mime: string } | null> {
     // Rendering PDF covers in Node is very hard without native deps.
     // Return null for now, a generic icon will be used on frontend.
     return null;

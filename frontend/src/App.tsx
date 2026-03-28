@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { Moon, Sun, Link, Upload, BookOpen, FolderPlus } from "lucide-react";
-import { SUPPORTED_EXTENSIONS } from "../../backend/src/processors/constants";
+import { SUPPORTED_EXTENSIONS } from "../contants";
 import Breadcrumb from "./components/Breadcrumb";
 import BookCard from "./components/BookCard";
 import FolderCard from "./components/FolderCard";

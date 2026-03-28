@@ -172,7 +172,7 @@ export default function BookCard({ name, file, onDelete }: BookCardProps) {
             )}
             <button
               onClick={() => setShowMeta(false)}
-              className="mt-5 w-full py-2 rounded-xl bg-gray-100 dark:bg-gray-700 text-sm font-medium hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
+              className="mt-5 w-full py-2 rounded-xl bg-gray-100 dark:bg-gray-700 text-sm font-medium hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors dark:text-white"
             >
               Close
             </button>

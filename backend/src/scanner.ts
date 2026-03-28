@@ -16,6 +16,10 @@ export interface FolderEntry {
 export interface ExploreResult {
   folders: FolderEntry[];
   books: BookEntry[];
+  totalFolders: number;
+  totalBooks: number;
+  globalFolders: number;
+  globalBooks: number;
 }
 
 /**
@@ -32,7 +36,7 @@ export function resolveSafe(rel: string): string {
 
 /**
  * Explore a directory and return its immediate children split into
- * sub-folders and epub books.
+ * sub-folders and epub books, along with recursive counts.
  */
 export function explore(relPath: string): ExploreResult {
   const abs = relPath ? resolveSafe(relPath) : BOOKS_ROOT;
@@ -55,7 +59,46 @@ export function explore(relPath: string): ExploreResult {
   folders.sort((a, b) => a.name.localeCompare(b.name));
   books.sort((a, b) => a.name.localeCompare(b.name));
 
-  return { folders, books };
+  const { totalFolders, totalBooks } = countRecursive(relPath);
+  const { totalFolders: globalFolders, totalBooks: globalBooks } = countRecursive("");
+
+  return { folders, books, totalFolders, totalBooks, globalFolders, globalBooks };
+}
+
+/**
+ * Recursively count all folders and books under a given relative path.
+ */
+function countRecursive(relPath: string): {
+  totalFolders: number;
+  totalBooks: number;
+} {
+  const abs = relPath ? resolveSafe(relPath) : BOOKS_ROOT;
+  let totalFolders = 0;
+  let totalBooks = 0;
+
+  function walk(dir: string) {
+    let entries: fs.Dirent[];
+    try {
+      entries = fs.readdirSync(dir, { withFileTypes: true });
+    } catch {
+      return;
+    }
+    for (const entry of entries) {
+      if (entry.name.startsWith(".")) continue;
+      if (entry.isDirectory()) {
+        totalFolders++;
+        walk(path.join(dir, entry.name));
+      } else if (
+        entry.isFile() &&
+        entry.name.toLowerCase().endsWith(".epub")
+      ) {
+        totalBooks++;
+      }
+    }
+  }
+
+  walk(abs);
+  return { totalFolders, totalBooks };
 }
 
 /**

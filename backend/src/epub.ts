@@ -42,45 +42,66 @@ function readEntry(
   });
 }
 
-/** Minimal XML text-node extractor (no heavy XML parser dependency) */
+/** 
+ * Improved XML text-node extractor.
+ * Handles namespaces and attributes.
+ */
 function xmlText(xml: string, tag: string): string {
-  const m = xml.match(new RegExp(`<${tag}[^>]*>([^<]*)</${tag}>`, "i"));
-  return m ? m[1].trim() : "";
+  // Look for <tag>, <ns:tag>, <tag attr="val">, etc.
+  // This regex matches the opening tag, then captures everything until the closing tag.
+  const regex = new RegExp(`<([^:> ]+?:)?${tag}[^>]*>([^<]*)</([^:> ]+?:)?${tag}>`, "i");
+  const m = xml.match(regex);
+  return m ? m[2].trim() : "";
 }
 
 function parseOpf(xml: string): ParsedOpf {
-  const title = xmlText(xml, "dc:title") || "Unknown Title";
-  const author = xmlText(xml, "dc:creator") || "Unknown Author";
-  const language = xmlText(xml, "dc:language") || "";
+  const title = xmlText(xml, "title") || "Unknown Title";
+  const author = xmlText(xml, "creator") || "Unknown Author";
+  const language = xmlText(xml, "language") || "";
 
   // Try to find cover image href
-  // <meta name="cover" content="cover-image"/> or similar
+  // 1. Check for <meta name="cover" content="id"/>
   let coverId: string | undefined;
   const metaCover = xml.match(
     /<meta[^>]*name=["']cover["'][^>]*content=["']([^"']+)["']/i
   );
   if (metaCover) coverId = metaCover[1];
 
-  // Find the actual file path in manifest
   let coverHref: string | undefined;
   if (coverId) {
+    // Escape coverId for regex
+    const escapedId = coverId.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
     const manifestItem = xml.match(
       new RegExp(
-        `<item[^>]*id=["']${coverId}["'][^>]*href=["']([^"']+)["']`,
+        `<item[^>]*id=["']${escapedId}["'][^>]*href=["']([^"']+)["']`,
         "i"
       )
     );
     if (manifestItem) coverHref = manifestItem[1];
   }
 
-  // Fallback: first image/jpeg or image/png in manifest
+  // 2. Check for <item properties="cover-image" ... /> (EPUB 3)
+  if (!coverHref) {
+    const epub3Cover = xml.match(
+      /<item[^>]*properties=["'][^"']*cover-image[^"']*["'][^>]*href=["']([^"']+)["']/i
+    );
+    if (epub3Cover) coverHref = epub3Cover[1];
+  }
+
+  // 3. Fallback: first image/jpeg or image/png in manifest that looks like a cover
   if (!coverHref) {
     const imageItems = [
       ...xml.matchAll(
         /<item[^>]*media-type=["'](image\/jpeg|image\/png)["'][^>]*href=["']([^"']+)["']/gi
       ),
     ];
-    if (imageItems.length > 0) {
+    // Prioritize items with "cover" in their ID or href
+    const coverLike = imageItems.find(it => 
+      it[0].toLowerCase().includes("cover") || it[2].toLowerCase().includes("cover")
+    );
+    if (coverLike) {
+      coverHref = coverLike[2];
+    } else if (imageItems.length > 0) {
       coverHref = imageItems[0][2];
     }
   }
@@ -94,24 +115,49 @@ export async function getMetadata(relFile: string): Promise<EpubMetadata> {
   const zip = await openZip(absPath);
 
   return new Promise((resolve, reject) => {
-    let containerXml = "";
     let opfPath = "";
     let opfBase = "";
-    let parsed: ParsedOpf | null = null;
+    const opfFiles = new Map<string, string>(); // filename -> content
 
-    zip.on("error", reject);
+    zip.on("error", (err) => {
+      zip.close();
+      reject(err);
+    });
+
     zip.on("end", () => {
-      if (!parsed) {
+      let finalOpfContent = "";
+      let finalOpfBase = "";
+
+      if (opfPath && opfFiles.has(opfPath)) {
+        finalOpfContent = opfFiles.get(opfPath)!;
+        finalOpfBase = opfPath.includes("/")
+          ? opfPath.substring(0, opfPath.lastIndexOf("/"))
+          : "";
+      } else if (opfFiles.size > 0) {
+        // Fallback to the first OPF found if container.xml was missing or path was wrong
+        const first = Array.from(opfFiles.entries())[0];
+        finalOpfContent = first[1];
+        const path = first[0];
+        finalOpfBase = path.includes("/")
+          ? path.substring(0, path.lastIndexOf("/"))
+          : "";
+      }
+
+      if (!finalOpfContent) {
         resolve({ title: "Unknown", author: "Unknown", language: "" });
       } else {
+        const parsed = parseOpf(finalOpfContent);
+        // Decode the cover filename in case it contains spaces/special chars encoded as %20 etc.
+        const decodedCoverHref = parsed.coverHref ? decodeURIComponent(parsed.coverHref) : undefined;
+        
         resolve({
           title: parsed.title,
           author: parsed.author,
           language: parsed.language,
-          coverFile: parsed.coverHref
-            ? opfBase
-              ? `${opfBase}/${parsed.coverHref}`
-              : parsed.coverHref
+          coverFile: decodedCoverHref
+            ? finalOpfBase
+              ? `${finalOpfBase}/${decodedCoverHref}`
+              : decodedCoverHref
             : undefined,
         });
       }
@@ -120,58 +166,45 @@ export async function getMetadata(relFile: string): Promise<EpubMetadata> {
 
     zip.readEntry();
     zip.on("entry", async (entry: yauzl.Entry) => {
-      const name: string = entry.fileName;
+      const name = entry.fileName;
 
-      // Step 1: read META-INF/container.xml to find content.opf path
       if (name === "META-INF/container.xml") {
         try {
           const buf = await readEntry(zip, entry);
-          containerXml = buf.toString("utf-8");
-          const m = containerXml.match(/full-path=["']([^"']+\.opf)["']/i);
-          if (m) {
-            opfPath = m[1];
-            opfBase = opfPath.includes("/")
-              ? opfPath.substring(0, opfPath.lastIndexOf("/"))
-              : "";
-          }
-        } catch {
-          // ignore
-        }
+          const xml = buf.toString("utf-8");
+          const m = xml.match(/full-path=["']([^"']+\.opf)["']/i);
+          if (m) opfPath = m[1];
+        } catch { /* ignore */ }
         zip.readEntry();
-        return;
-      }
-
-      // Step 2: read the .opf file
-      if (opfPath && name === opfPath) {
+      } else if (name.toLowerCase().endsWith(".opf")) {
         try {
           const buf = await readEntry(zip, entry);
-          parsed = parseOpf(buf.toString("utf-8"));
-        } catch {
-          // ignore
-        }
+          opfFiles.set(name, buf.toString("utf-8"));
+        } catch { /* ignore */ }
         zip.readEntry();
-        return;
+      } else {
+        zip.readEntry();
       }
-
-      // Skip irrelevant entries quickly
-      zip.readEntry();
     });
   });
 }
 
 /** Extract cover image bytes from an epub file */
 export async function getCover(relFile: string): Promise<Buffer | null> {
-  // First pass: get metadata to learn the cover file path
   const meta = await getMetadata(relFile);
   if (!meta.coverFile) return null;
 
-  const coverEntry = meta.coverFile;
+  const coverEntry = meta.coverFile.replace(/\\/g, "/");
 
   const absPath = resolveSafe(relFile);
   const zip2 = await openZip(absPath);
 
   return new Promise((resolve, reject) => {
-    zip2.on("error", reject);
+    zip2.on("error", (err) => {
+      zip2.close();
+      reject(err);
+    });
+
     zip2.on("end", () => {
       resolve(null);
       zip2.close();
@@ -179,12 +212,13 @@ export async function getCover(relFile: string): Promise<Buffer | null> {
 
     zip2.readEntry();
     zip2.on("entry", async (entry: yauzl.Entry) => {
-      if (entry.fileName === coverEntry) {
+      if (entry.fileName === coverEntry || entry.fileName === coverEntry.replace(/^\//, "")) {
         try {
           const buf = await readEntry(zip2, entry);
           zip2.close();
           resolve(buf);
         } catch (e) {
+          zip2.close();
           reject(e);
         }
         return;

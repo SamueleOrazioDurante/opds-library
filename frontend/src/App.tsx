@@ -18,6 +18,10 @@ interface FolderEntry {
 interface ExploreResult {
   folders: FolderEntry[];
   books: BookEntry[];
+  totalFolders: number;
+  totalBooks: number;
+  globalFolders: number;
+  globalBooks: number;
 }
 
 function useDarkMode() {
@@ -56,8 +60,16 @@ function buildSegments(currentPath: string) {
 export default function App() {
   const [dark, setDark] = useDarkMode();
   const [currentPath, setCurrentPath] = useState<string>("");
-  const [data, setData] = useState<ExploreResult>({ folders: [], books: [] });
+  const [data, setData] = useState<ExploreResult>({
+    folders: [],
+    books: [],
+    totalFolders: 0,
+    totalBooks: 0,
+    globalFolders: 0,
+    globalBooks: 0,
+  });
   const [loading, setLoading] = useState(true);
+  const [isFirstLoad, setIsFirstLoad] = useState(true);
   const [copied, setCopied] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [showNewFolder, setShowNewFolder] = useState(false);
@@ -71,8 +83,16 @@ export default function App() {
       if (!res.ok) throw new Error("Failed to fetch");
       const json = await res.json();
       setData(json);
+      setIsFirstLoad(false);
     } catch {
-      setData({ folders: [], books: [] });
+      setData({
+        folders: [],
+        books: [],
+        totalFolders: 0,
+        totalBooks: 0,
+        globalFolders: 0,
+        globalBooks: 0,
+      });
     } finally {
       setLoading(false);
     }
@@ -168,14 +188,27 @@ export default function App() {
         <Breadcrumb segments={segments} onNavigate={navigate} />
 
         {/* Action bar */}
-        <div className="flex items-center justify-between mb-5">
-          <p className="text-sm text-gray-500 dark:text-gray-400">
-            {loading
-              ? "Loading…"
-              : `${data.folders.length} folder${data.folders.length !== 1 ? "s" : ""}, ${data.books.length} book${data.books.length !== 1 ? "s" : ""}`}
-          </p>
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+          <div className="flex items-center gap-2 overflow-x-auto pb-1 no-scrollbar text-nowrap">
+            <div className="flex-shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 border border-gray-200 dark:border-gray-700 shadow-sm">
+              <BookOpen size={14} className="text-indigo-500" />
+              <span className="text-xs font-semibold whitespace-nowrap">
+                {loading && isFirstLoad
+                  ? "Loading…"
+                  : `${data.globalFolders} folders, ${data.globalBooks} books`}
+              </span>
+            </div>
+            {!isFirstLoad && currentPath && (
+              <div className="flex-shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-indigo-50 dark:bg-indigo-900/40 text-indigo-700 dark:text-indigo-300 border border-indigo-100 dark:border-indigo-800/50 shadow-sm animate-in fade-in slide-in-from-left-2 duration-300">
+                <span className="w-1.5 h-1.5 rounded-full bg-indigo-400" />
+                <span className="text-xs font-semibold whitespace-nowrap">
+                  Here: {data.totalFolders} / {data.totalBooks}
+                </span>
+              </div>
+            )}
+          </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 shrink-0">
             {/* New Folder button */}
             <button
               onClick={() => setShowNewFolder(true)}
@@ -200,7 +233,7 @@ export default function App() {
           </div>
         </div>
 
-        {loading ? (
+        {loading && isFirstLoad ? (
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3 animate-pulse">
             {Array.from({ length: 8 }).map((_, i) => (
               <div

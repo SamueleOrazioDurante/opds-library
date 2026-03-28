@@ -1,10 +1,10 @@
 import { useState, useEffect, useCallback } from "react";
 import { Moon, Sun, Link, Upload, BookOpen, FolderPlus } from "lucide-react";
+import { SUPPORTED_EXTENSIONS } from "../../backend/src/processors/constants";
 import Breadcrumb from "./components/Breadcrumb";
 import BookCard from "./components/BookCard";
 import FolderCard from "./components/FolderCard";
 import NewFolderModal from "./components/NewFolderModal";
-
 interface BookEntry {
   name: string;
   file: string;
@@ -221,10 +221,10 @@ export default function App() {
             {/* Upload button */}
             <label className="flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white cursor-pointer transition-colors">
               <Upload size={13} />
-              {uploading ? "Uploading…" : "Upload ePub"}
+              {uploading ? "Uploading…" : "Upload File"}
               <input
                 type="file"
-                accept=".epub"
+                accept={SUPPORTED_EXTENSIONS.join(",")}
                 className="hidden"
                 onChange={handleUpload}
                 disabled={uploading}
@@ -289,7 +289,7 @@ export default function App() {
                 <BookOpen size={48} className="mb-3 opacity-40" />
                 <p className="text-sm">No books or folders found here.</p>
                 <p className="text-xs mt-1">
-                  Upload an ePub or add files to your /books directory.
+                  Upload a book or add files to your /books directory.
                 </p>
               </div>
             )}

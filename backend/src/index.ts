@@ -4,7 +4,7 @@ import { staticPlugin } from "@elysiajs/static";
 import path from "path";
 import fs from "fs";
 import { explore, resolveSafe, BOOKS_ROOT } from "./scanner";
-import { getMetadata, getCover } from "./epub";
+import { getProcessor, SUPPORTED_EXTENSIONS } from "./processors";
 import {
   generateRoot,
   generateFolderFeed,
@@ -90,7 +90,8 @@ const app = new Elysia()
         return "file parameter required";
       }
       try {
-        const buf = await getCover(relFile);
+        const processor = getProcessor(relFile);
+        const buf = await processor.getCover(relFile);
         if (!buf) {
           set.status = 404;
           return "No cover found";
@@ -116,7 +117,8 @@ const app = new Elysia()
         return { error: "file parameter required" };
       }
       try {
-        const meta = await getMetadata(relFile);
+        const processor = getProcessor(relFile);
+        const meta = await processor.getMetadata(relFile);
         return {
           title: meta.title,
           author: meta.author,
@@ -246,9 +248,10 @@ const app = new Elysia()
           return { error: "No file provided" };
         }
         const filename = file.name;
-        if (!filename.toLowerCase().endsWith(".epub")) {
+        const ext = path.extname(filename).toLowerCase();
+        if (!SUPPORTED_EXTENSIONS.includes(ext)) {
           set.status = 400;
-          return { error: "Only .epub files are accepted" };
+          return { error: "Unsupported file format" };
         }
         const destPath = path.join(destDir, filename);
         const buf = Buffer.from(await file.arrayBuffer());

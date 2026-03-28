@@ -5,6 +5,9 @@ export default defineConfig({
   base: "./",
   plugins: [react()],
   server: {
+    fs: {
+      allow: [".."],
+    },
     proxy: {
       "/api": "http://localhost:3000",
       "/opds": "http://localhost:3000",

@@ -18,6 +18,19 @@ function xmlEscape(str: string): string {
     .replace(/'/g, "&apos;");
 }
 
+const MIME_TYPES: Record<string, string> = {
+  ".epub": "application/epub+zip",
+  ".pdf": "application/pdf",
+  ".mobi": "application/x-mobipocket-ebook",
+  ".azw": "application/vnd.amazon.ebook",
+  ".fb2": "application/x-fb2",
+  ".cbz": "application/vnd.comicbook+zip",
+  ".cbr": "application/vnd.comicbook-rar",
+  ".djvu": "image/vnd.djvu",
+  ".rtf": "application/rtf",
+  ".txt": "text/plain",
+};
+
 function atomEntry(
   id: string,
   title: string,
@@ -188,14 +201,16 @@ export function generateAlphaFeed(
 function bookEntry(book: BookEntry, baseUrl: string, now: string): string {
   const downloadHref = `${baseUrl}/api/download?file=${encodeURIComponent(book.file)}`;
   const coverHref = `${baseUrl}/api/cover?file=${encodeURIComponent(book.file)}`;
-  const titleDisplay = book.name.replace(/\.epub$/i, "");
+  const ext = path.extname(book.name).toLowerCase();
+  const titleDisplay = book.name.slice(0, -ext.length);
+  const mime = MIME_TYPES[ext] || "application/octet-stream";
 
   return atomEntry(
     downloadHref,
     titleDisplay,
     now,
     [
-      `<link rel="http://opds-spec.org/acquisition" href="${xmlEscape(downloadHref)}" type="application/epub+zip"/>`,
+      `<link rel="http://opds-spec.org/acquisition" href="${xmlEscape(downloadHref)}" type="${mime}"/>`,
       `<link rel="http://opds-spec.org/image" href="${xmlEscape(coverHref)}" type="image/jpeg"/>`,
       `<link rel="http://opds-spec.org/image/thumbnail" href="${xmlEscape(coverHref)}" type="image/jpeg"/>`,
     ]

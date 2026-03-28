@@ -1,5 +1,6 @@
 import path from "path";
 import fs from "fs";
+import { SUPPORTED_EXTENSIONS } from "./processors";
 
 export const BOOKS_ROOT = process.env.BOOKS_DIR ?? "/books";
 
@@ -51,8 +52,11 @@ export function explore(relPath: string): ExploreResult {
     const rel = path.join(relPath, entry.name);
     if (entry.isDirectory()) {
       folders.push({ name: entry.name, path: rel });
-    } else if (entry.isFile() && entry.name.toLowerCase().endsWith(".epub")) {
-      books.push({ name: entry.name, file: rel });
+    } else if (entry.isFile()) {
+      const ext = path.extname(entry.name).toLowerCase();
+      if (SUPPORTED_EXTENSIONS.includes(ext)) {
+        books.push({ name: entry.name, file: rel });
+      }
     }
   }
 
@@ -88,11 +92,11 @@ function countRecursive(relPath: string): {
       if (entry.isDirectory()) {
         totalFolders++;
         walk(path.join(dir, entry.name));
-      } else if (
-        entry.isFile() &&
-        entry.name.toLowerCase().endsWith(".epub")
-      ) {
-        totalBooks++;
+      } else if (entry.isFile()) {
+        const ext = path.extname(entry.name).toLowerCase();
+        if (SUPPORTED_EXTENSIONS.includes(ext)) {
+          totalBooks++;
+        }
       }
     }
   }
@@ -121,11 +125,11 @@ export function walkBooks(relPath: string): BookEntry[] {
       const absEntry = path.join(dir, entry.name);
       if (entry.isDirectory()) {
         walk(absEntry, rel);
-      } else if (
-        entry.isFile() &&
-        entry.name.toLowerCase().endsWith(".epub")
-      ) {
-        results.push({ name: entry.name, file: rel });
+      } else if (entry.isFile()) {
+        const ext = path.extname(entry.name).toLowerCase();
+        if (SUPPORTED_EXTENSIONS.includes(ext)) {
+          results.push({ name: entry.name, file: rel });
+        }
       }
     }
   }

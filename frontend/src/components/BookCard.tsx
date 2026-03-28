@@ -20,7 +20,7 @@ export default function BookCard({ name, file, onDelete }: BookCardProps) {
   const [coverError, setCoverError] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
 
-  const title = name.replace(/\.epub$/i, "");
+  const title = name.substring(0, name.lastIndexOf(".")) || name;
   const coverUrl = `/api/cover?file=${encodeURIComponent(file)}`;
   const downloadUrl = `/api/download?file=${encodeURIComponent(file)}`;
 

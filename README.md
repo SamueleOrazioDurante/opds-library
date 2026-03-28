@@ -17,6 +17,15 @@ I couldn't find anything decent, lightweight, and with a modern aesthetic to man
 - 📤 **Upload & Delete** — manage books and folders from the web UI
 - 🔗 **Copy OPDS URL** — one click to copy the OPDS feed URL for your reader
 
+## Supported Formats
+
+The following formats are currently supported by the library:
+
+**EPUB, PDF, FB2, MOBI, AZW, CBZ, CBR, DJVU, RTF, TXT**
+
+> [!NOTE]
+> Only some of these formats have been thoroughly tested. If you encounter any issues with a specific format, please refer to the project's [issue tracker](https://github.com/SamueleOrazioDurante/opds-library/issues).
+
 ## Deployment
 
 ### Docker Compose (recommended)

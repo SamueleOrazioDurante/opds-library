@@ -66,18 +66,19 @@ docker compose -f docker-compose.dev.yml up -d --build
 
 ## API Reference
 
-| Method   | Endpoint                 | Description                          |
-| -------- | ------------------------ | ------------------------------------ |
-| `GET`    | `/opds`                  | OPDS root catalog                    |
-| `GET`    | `/opds/folder?path=...`  | OPDS folder catalog                  |
-| `GET`    | `/opds/alpha?letter=A`   | OPDS alphabetical catalog            |
-| `GET`    | `/api/explore?path=...`  | List folders and books at path       |
-| `GET`    | `/api/cover?file=...`    | Serve ePub cover image               |
-| `GET`    | `/api/metadata?file=...` | Return title, author, language       |
-| `GET`    | `/api/download?file=...` | Download an ePub file                |
-| `POST`   | `/api/upload?path=...`   | Upload an ePub (multipart/form-data) |
-| `DELETE` | `/api/book?file=...`     | Delete a book file                   |
-| `DELETE` | `/api/folder?path=...`   | Delete a folder and its contents     |
+| Method   | Endpoint                 | Description                                         |
+| -------- | ------------------------ | --------------------------------------------------- |
+| `GET`    | `/opds`                  | OPDS root catalog                                   |
+| `GET`    | `/opds/folder?path=...`  | OPDS folder catalog                                 |
+| `GET`    | `/opds/alpha?letter=A`   | OPDS alphabetical catalog                           |
+| `GET`    | `/api/explore?path=...`  | List folders and books at path                      |
+| `GET`    | `/api/cover?file=...`    | Serve ePub cover image                              |
+| `GET`    | `/api/metadata?file=...` | Return title, author, language                      |
+| `GET`    | `/api/download?file=...` | Download an ePub file                               |
+| `POST`   | `/api/upload?path=...`   | Upload an ePub (multipart/form-data)                |
+| `POST`   | `/api/folder?path=...`   | Create a new folder (JSON body: `{ "name": "..." }`) |
+| `DELETE` | `/api/book?file=...`     | Delete a book file                                  |
+| `DELETE` | `/api/folder?path=...`   | Delete a folder and its contents                    |
 
 ## Project Structure
 
@@ -88,7 +89,10 @@ opds-library/
 │   │   ├── index.ts      # Elysia entry point, API & OPDS routing
 │   │   ├── opds.ts       # OPDS/Atom XML feed generation
 │   │   ├── scanner.ts    # File system reading (no DB)
-│   │   └── epub.ts       # On-the-fly metadata & cover extraction
+│   │   └── processors/   # Metadata & cover extraction for various formats
+│   │       ├── epub.ts   # EPUB-specific logic
+│   │       ├── pdf.ts    # PDF-specific logic
+│   │       └── ...       # Other archive and document processors
 │   └── package.json
 ├── frontend/
 │   ├── src/
@@ -96,7 +100,8 @@ opds-library/
 │   │   └── components/
 │   │       ├── Breadcrumb.tsx         # File-explorer-style navigation
 │   │       ├── BookCard.tsx           # Cover, download, metadata, delete
-│   │       └── FolderCard.tsx         # Folder icon, name, delete
+│   │       ├── FolderCard.tsx         # Folder icon, name, delete
+│   │       └── NewFolderModal.tsx     # Dialog for creating new folders
 │   └── package.json
 ├── Dockerfile             # Multi-stage: builds frontend, runs backend
 ├── docker-compose.yml     # Production image

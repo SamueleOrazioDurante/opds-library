@@ -59,7 +59,10 @@ function buildSegments(currentPath: string) {
 
 export default function App() {
   const [dark, setDark] = useDarkMode();
-  const [currentPath, setCurrentPath] = useState<string>("");
+  const [currentPath, setCurrentPath] = useState<string>(() => {
+    const params = new URLSearchParams(window.location.search);
+    return params.get("path") || "";
+  });
   const [data, setData] = useState<ExploreResult>({
     folders: [],
     books: [],
@@ -102,7 +105,23 @@ export default function App() {
     fetchData(currentPath);
   }, [currentPath, fetchData]);
 
+  useEffect(() => {
+    const handlePopState = () => {
+      const params = new URLSearchParams(window.location.search);
+      setCurrentPath(params.get("path") || "");
+    };
+    window.addEventListener("popstate", handlePopState);
+    return () => window.removeEventListener("popstate", handlePopState);
+  }, []);
+
   function navigate(path: string) {
+    const url = new URL(window.location.href);
+    if (path) {
+      url.searchParams.set("path", path);
+    } else {
+      url.searchParams.delete("path");
+    }
+    window.history.pushState({}, "", url.toString());
     setCurrentPath(path);
   }
 

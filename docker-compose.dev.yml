@@ -5,5 +5,5 @@ services:
     ports:
       - "3000:3000"
     volumes:
-      - /path/to/your/books:/books
+      - ./books:/books:Z
     restart: unless-stopped
